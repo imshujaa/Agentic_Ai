@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autonomous Query Refinement Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for a sleeker look */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827; /* Dark gray background */
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        .loader {
+            border-top-color: #3498db;
+            -webkit-animation: spin 1s linear infinite;
+            animation: spin 1s linear infinite;
+        }
+
+        @-webkit-keyframes spin {
+            0% { -webkit-transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(360deg); }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .highlight {
+            background-color: #3b82f6;
+            color: white;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="text-gray-200">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
+
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-white tracking-tight">Autonomous Query Refinement Agent</h1>
+            <p class="mt-3 text-lg text-gray-400">Better Questions, Better Results.</p>
+        </header>
+
+        <!-- Search Form -->
+        <form id="search-form" class="mb-8">
+            <div class="relative">
+                <input type="search" id="search-input" class="block w-full p-4 pl-12 text-lg text-white border border-gray-600 rounded-lg bg-gray-800 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400" placeholder="Search the OpenWebText dataset..." required>
+                <button type="submit" class="text-white absolute right-2.5 bottom-2.5 bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-800 font-medium rounded-lg text-sm px-4 py-2 transition-colors">Search</button>
+                <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                     <svg class="w-5 h-5 text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
+                    </svg>
+                </div>
+            </div>
+        </form>
+
+        <!-- Status/Error Display -->
+        <div id="status-container" class="text-center my-6">
+            <div id="loader" class="hidden loader ease-linear rounded-full border-4 border-t-4 border-gray-500 h-12 w-12 mx-auto"></div>
+            <p id="error-message" class="hidden text-red-400 bg-red-900/20 p-3 rounded-lg"></p>
+        </div>
+
+        <!-- Results Area -->
+        <div id="results-area" class="space-y-6">
+            <!-- Agent Insights will be injected here -->
+            <div id="agent-insights" class="hidden"></div>
+            <!-- Document Results will be injected here -->
+            <div id="results-container" class="space-y-4"></div>
+        </div>
+        
+        <!-- Initial State Message -->
+        <div id="initial-message" class="text-center py-16 px-6 bg-gray-800/50 border border-gray-700 rounded-lg">
+            <svg class="mx-auto h-12 w-12 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+            <h3 class="mt-2 text-lg font-medium text-white">Ready to search</h3>
+            <p class="mt-1 text-gray-400">Enter a query above to see the AI agent in action.</p>
+        </div>
+
+    </div>
+
+    <script>
+        const searchForm = document.getElementById('search-form');
+        const searchInput = document.getElementById('search-input');
+        const loader = document.getElementById('loader');
+        const errorMessage = document.getElementById('error-message');
+        const agentInsightsContainer = document.getElementById('agent-insights');
+        const resultsContainer = document.getElementById('results-container');
+        const initialMessage = document.getElementById('initial-message');
+        const resultsArea = document.getElementById('results-area');
+
+        // Backend API URL
+        const API_URL = 'http://localhost:5000/search';
+
+        searchForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const query = searchInput.value.trim();
+            if (!query) return;
+
+            // --- Reset UI State ---
+            loader.classList.remove('hidden');
+            errorMessage.classList.add('hidden');
+            agentInsightsContainer.classList.add('hidden');
+            agentInsightsContainer.innerHTML = '';
+            resultsContainer.innerHTML = '';
+            initialMessage.classList.add('hidden');
+            resultsArea.classList.remove('hidden');
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.error || `HTTP error! Status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                displayResults(data);
+
+            } catch (error) {
+                console.error('Search failed:', error);
+                showError(`Search failed: ${error.message}. Is the backend server running?`);
+            } finally {
+                loader.classList.add('hidden');
+            }
+        });
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+            resultsArea.classList.add('hidden');
+        }
+
+        function displayResults(data) {
+            // 1. Display Agent Insights
+            if (data.refined_queries && data.refined_queries.length > 0) {
+                let insightsHTML = `
+                    <div class="p-4 border border-blue-500/30 bg-blue-900/20 rounded-lg">
+                        <h2 class="text-xl font-semibold text-blue-300 mb-3">Agent Insights</h2>
+                        <p class="text-gray-400 mb-1">You searched for: <span class="font-semibold text-white">"${escapeHtml(data.original_query)}"</span></p>
+                        <p class="text-gray-400">The agent refined this into the following queries to improve results:</p>
+                        <div class="flex flex-wrap gap-2 mt-3">
+                `;
+                data.refined_queries.forEach(q => {
+                    insightsHTML += `<span class="bg-gray-700 text-gray-300 text-sm font-medium px-3 py-1 rounded-full">${escapeHtml(q)}</span>`;
+                });
+                insightsHTML += '</div></div>';
+                agentInsightsContainer.innerHTML = insightsHTML;
+                agentInsightsContainer.classList.remove('hidden');
+            }
+
+            // 2. Display Document Results
+            if (data.documents && data.documents.length > 0) {
+                let resultsHTML = '';
+                data.documents.forEach(doc => {
+                    // This regex finds the <b> and </b> tags from Whoosh and replaces them.
+                    const highlightedSnippet = escapeHtml(doc.snippet).replace(/&lt;b&gt;/g, '<b class="highlight">').replace(/&lt;\/b&gt;/g, '</b>');
+                    
+                    resultsHTML += `
+                        <div class="bg-gray-800 border border-gray-700 p-4 rounded-lg shadow-md transition hover:border-gray-600">
+                            <h3 class="text-md font-semibold text-blue-400 truncate">${escapeHtml(doc.path)}</h3>
+                            <p class="text-gray-400 mt-2">${highlightedSnippet}</p>
+                        </div>
+                    `;
+                });
+                resultsContainer.innerHTML = resultsHTML;
+            } else {
+                resultsContainer.innerHTML = `
+                    <div class="text-center py-10 px-6 bg-gray-800/50 border border-gray-700 rounded-lg">
+                         <h3 class="mt-2 text-lg font-medium text-white">No Results Found</h3>
+                        <p class="mt-1 text-gray-400">The agent couldn't find any documents matching your query.</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function escapeHtml(unsafe) {
+            return unsafe
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
+
+    </script>
+
+</body>
+</html>
