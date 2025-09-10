@@ -1,6 +1,6 @@
 **Agentic AI for Information Retrieval: An Autonomous Query Refinement System**
 
-This project is a fully functional prototype of an agentic Information Retrieval (IR) system, developed for the Information Retrieval course at the Università degli Studi di Napoli Federico II (A.Y. 2024-25).
+This project is a fully functional prototype of an agentic Information Retrieval (IR) system, developed for the Information Retrieval course at the Università degli Studi di Napoli Federico II.
 
 The system addresses the long-standing vocabulary mismatch problem in search. Instead of relying on the user to find the perfect keywords, this application uses a Large Language Model (LLM) as an intelligent agent to autonomously refine the user's query, leading to significantly more relevant search results.
 
